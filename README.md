@@ -4,13 +4,11 @@ description: Welcome to your team’s developer platform
 
 # Developer Platform
 
-<h2 align="center">Developer platform template</h2>
+<h2 align="center">Regression Modeling in Social Sciences Using GSS</h2>
 
 <p align="center">Welcome to your team’s new developer platform</p>
 
-<p align="center"><a href="http://app.gitbook.com/join" class="button primary">Sign up</a> <a href="http://app.gitbook.com/join" class="button secondary">Log in</a></p>
-
-<table data-view="cards"><thead><tr><th></th><th></th><th></th><th data-hidden data-card-target data-type="content-ref"></th><th data-hidden data-card-cover data-type="files"></th></tr></thead><tbody><tr><td><h4><i class="fa-leaf">:leaf:</i></h4></td><td><strong>No code</strong></td><td>Get started with the developer platform in 5 minutes.</td><td><a href="https://template.gitbook.com/space-product-docs">https://template.gitbook.com/space-product-docs</a></td><td><a href=".gitbook/assets/no-code.jpg">no-code.jpg</a></td></tr><tr><td><h4><i class="fa-server">:server:</i></h4></td><td><strong>Hosted</strong></td><td>Learn more about hosting the developer platform.</td><td><a href="https://template.gitbook.com/space-product-docs">https://template.gitbook.com/space-product-docs</a></td><td><a href=".gitbook/assets/hosted.jpg">hosted.jpg</a></td></tr><tr><td><h4><i class="fa-terminal">:terminal:</i></h4></td><td><strong>API reference</strong></td><td>Browse, test, and implement APIs.</td><td><a href="https://template.gitbook.com/space-api-reference">https://template.gitbook.com/space-api-reference</a></td><td><a href=".gitbook/assets/api-reference.jpg">api-reference.jpg</a></td></tr></tbody></table>
+<table data-view="cards"><thead><tr><th></th><th></th><th></th><th data-hidden data-card-target data-type="content-ref"></th><th data-hidden data-card-cover data-type="image">Cover image</th></tr></thead><tbody><tr><td><h4><i class="fa-leaf">:leaf:</i></h4></td><td><strong>Modules</strong></td><td>Get started with the developer platform in 5 minutes.</td><td><a href="https://app.gitbook.com/o/cXVHRKHGch1v3h85o0hC/s/asFimnfiGbdeIuUYNH7w/">Documentation</a></td><td><a href=".gitbook/assets/no-code.jpg">no-code.jpg</a></td></tr><tr><td><h4><i class="fa-server">:server:</i></h4></td><td><strong>Hosted</strong></td><td>Learn more about hosting the developer platform.</td><td><a href="https://app.gitbook.com/o/cXVHRKHGch1v3h85o0hC/s/asFimnfiGbdeIuUYNH7w/">Documentation</a></td><td><a href=".gitbook/assets/hosted.jpg">hosted.jpg</a></td></tr><tr><td><h4><i class="fa-terminal">:terminal:</i></h4></td><td><strong>API reference</strong></td><td>Browse, test, and implement APIs.</td><td><a href="https://app.gitbook.com/o/cXVHRKHGch1v3h85o0hC/s/JfDHDfbUzJhxSNmTPZuE/">API Reference</a></td><td><a href=".gitbook/assets/api-reference.jpg">api-reference.jpg</a></td></tr><tr><td><h4><i class="fa-leaf">:leaf:</i></h4></td><td>About</td><td></td><td></td><td><a href=".gitbook/assets/api-reference.jpg">api-reference.jpg</a></td></tr></tbody></table>
 
 {% columns %}
 {% column %}
@@ -20,7 +18,7 @@ Setting up your first API call should be the easiest part of getting started. Wi
 
 No guesswork, no complexity—just your first successful call, fast.
 
-<a href="https://template.gitbook.com/space-product-docs" class="button primary" data-icon="rocket-launch">Get started</a> <a href="https://template.gitbook.com/space-api-reference" class="button secondary" data-icon="terminal">API reference</a>
+<a href="https://app.gitbook.com/o/cXVHRKHGch1v3h85o0hC/s/asFimnfiGbdeIuUYNH7w/" class="button primary" data-icon="rocket-launch">Get started</a> <a href="https://app.gitbook.com/o/cXVHRKHGch1v3h85o0hC/s/JfDHDfbUzJhxSNmTPZuE/" class="button secondary" data-icon="terminal">API reference</a>
 {% endcolumn %}
 
 {% column %}
@@ -52,7 +50,7 @@ const response = await client.messages.send({
 
 Read guides, watch tutorials, and learn more about working with the developer platform and integrating it with your own stack.
 
-<a href="https://template.gitbook.com/space-help-center" class="button primary" data-icon="book-open">Guides</a> <a href="https://template.gitbook.com/space-product-docs" class="button secondary" data-icon="book">Documentation</a>
+<a href="https://app.gitbook.com/o/cXVHRKHGch1v3h85o0hC/s/pdvnMRcdHnF3YQYBAk3N/" class="button primary" data-icon="book-open">Guides</a> <a href="https://app.gitbook.com/o/cXVHRKHGch1v3h85o0hC/s/asFimnfiGbdeIuUYNH7w/" class="button secondary" data-icon="book">Documentation</a>
 {% endcolumn %}
 {% endcolumns %}
 
