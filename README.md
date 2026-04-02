@@ -1,28 +1,16 @@
-# Home
+---
+icon: r-project
+---
 
-## Regression Modeling in Social Sciences Using GSS
+# Start here
 
-This site explains regression modeling in social sciences using General Social Survey (2024) dataset.&#x20;
+## Software
 
-### Modules
+This site shows how to use RStudio. There are two options to use RStudio:
 
-There are 15 modules, each of them containing:
+1. Install R and RStudio to your personal computer
+2. Create a free  RStudio Cloud account (known as Posit).
 
-1. R script file
-2. Slides
-3. Lab assignment
-4. Sample lab assignment
+### How to?
 
-After completing the modules, users will be able to run and interpret multiple linear regression and logistic regression analysis.
-
-### Lab resources
-
-1. Variables in GSS (categorized codebook)
-2. Code and interpretation templates
-3. Flashcards
-4. Other datasets
-
-### About this site
-
-### About the instructor
-
+<table data-view="cards"><thead><tr><th></th><th data-hidden data-card-cover data-type="image">Cover image</th><th data-hidden></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead><tbody><tr><td><strong>Install R and RStudio to your personal computer</strong></td><td data-object-fit="contain"><a href=".gitbook/assets/SCR-20260402-ilgy.png">SCR-20260402-ilgy.png</a></td><td></td><td><a href="getting-started/quickstart.md">quickstart.md</a></td></tr><tr><td><strong>Create a free RStudio Cloud account</strong></td><td data-object-fit="contain"><a href=".gitbook/assets/SCR-20260402-ilml.png">SCR-20260402-ilml.png</a></td><td></td><td><a href="https://github.com/GitbookIO/gitbook-templates/blob/main/product-docs/broken-reference/README.md">https://github.com/GitbookIO/gitbook-templates/blob/main/product-docs/broken-reference/README.md</a></td></tr></tbody></table>
