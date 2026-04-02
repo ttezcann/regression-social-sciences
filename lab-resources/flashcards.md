@@ -6,9 +6,37 @@ dasda
 
 
 
-## G. RStudio issues and usage
+## G. RStudio usage
 
 {% stepper %}
+{% step %}
+### How to create a free RStudio Cloud account
+
+#### RStudio Cloud website
+
+1. Go to [https://posit.cloud/plans/free](https://posit.cloud/plans/free) and make sure you choose “free.”
+2. Click "Sign up."
+
+<figure><img src="../.gitbook/assets/cloud_free_signup.png" alt=""><figcaption></figcaption></figure>
+
+#### Email address and password
+
+1. Use an email address.
+2. Put a password (at least 10 characters). You must:
+   1. Use upper and lower case letters,
+   2. Use numbers,
+   3. Use special characters.
+3. Type your first name.
+4. Type your last name.
+5. Click "Sign up."
+
+<figure><img src="../.gitbook/assets/email_pass_name.png" alt=""><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+
+{% endstep %}
+
 {% step %}
 ### Opening all the panes
 
@@ -38,7 +66,12 @@ dasda
 {% step %}
 ### Using RStudio on a university lab computer
 
+Every time you log in to a lab computer, the R script files will install all the packages again.
 
+Because when you log out, lab computers revert to their factory settings and deletes the installed packages.
+
+1. Type "RStudio" on the search bar of the computer. Open RStudio.
+2. On RStudio, run the R script file code on the console.
 {% endstep %}
 
 {% step %}
@@ -78,5 +111,3 @@ Select Start <mark style="color:red;">➜</mark> Settings <mark style="color:red
 {% endhint %}
 {% endstep %}
 {% endstepper %}
-
-dsada
