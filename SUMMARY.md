@@ -23,6 +23,8 @@
 * [Logistic regression](modules/logistic-regression.md)
 * [Modeling exercises](modules/modeling-exercises.md)
 * [Regression assumptions and diagnostics](modules/regression-assumptions-and-diagnostics.md)
+* [Page 1](modules/page-1.md)
+* [Page 2](modules/page-2.md)
 
 ## Lab resources
 
