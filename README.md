@@ -17,10 +17,10 @@ After completing the modules, users will be able to run and interpret multiple l
 
 ### [Lab resources](lab-resources/)
 
-1. [Variables in GSS](lab-resources/variables-in-gss.md) (categorized codebook)
-2. [Code and interpretation templates](lab-resources/code-and-interpretation-templates.md)
-3. [Flashcards](lab-resources/flashcards.md)
-4. [Other datasets](lab-resources/other-datasets.md)
+1. ### [Variables in GSS](lab-resources/variables-in-gss.md) (categorized codebook)
+2. ### [Code and interpretation templates](lab-resources/code-and-interpretation-templates.md)
+3. ### [Flashcards](lab-resources/flashcards.md)
+4. ### [Other datasets](lab-resources/other-datasets.md)
 
 <h2 align="center"><a href="start-here.md" class="button primary" data-icon="play">Start here with RStudio installation</a></h2>
 
