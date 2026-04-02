@@ -1,7 +1,3 @@
-# Developer Platformss
+# Read me
 
-dasdasda
-
-dasdaasdaddas
-
-dsada
+read me
