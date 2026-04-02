@@ -22,6 +22,8 @@ After completing the modules, users will be able to run and interpret multiple l
 3. [Flashcards](lab-resources/flashcards.md)
 4. [Other datasets](lab-resources/other-datasets.md)
 
+<h2 align="center"><a href="start-here.md" class="button primary" data-icon="play">Start here with RStudio installation</a></h2>
+
 ## About this site
 
 ## About the instructor

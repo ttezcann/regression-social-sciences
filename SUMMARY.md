@@ -1,7 +1,7 @@
 # Table of contents
 
 * [HOME](README.md)
-* [START HERE](start-here.md)
+* [RSTUDIO INSTALLATION](start-here.md)
 * [MODULES](modules/README.md)
   * [Introduction to RStudio](modules/introduction-to-rstudio.md)
   * [Introduction to scripting](modules/introduction-to-scripting.md)
