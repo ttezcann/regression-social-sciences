@@ -4,7 +4,7 @@
 
 This site explains regression modeling in social sciences using [General Social Survey (2024)](https://gss.norc.org/content/dam/gss/get-documentation/pdf/codebook/GSS%202024%20Codebook%20R3.pdf) dataset.
 
-### [Modules](modules.md)
+### [Modules](modules/)
 
 There are 15 modules, each of them containing: **(1)** R script file, **(2)** Slides, **(3)** Lab assignment, and **(4)** Sample lab assignment.
 
