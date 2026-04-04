@@ -2,7 +2,7 @@
 
 {% stepper %}
 {% step %}
-### RStudio Cloud website
+#### RStudio Cloud website
 
 1. Go to [https://posit.cloud/plans/free](https://posit.cloud/plans/free) and make sure you choose “free.”
 2. Click "Sign up."
@@ -11,7 +11,7 @@
 {% endstep %}
 
 {% step %}
-### Email address and password
+#### Email address and password
 
 1. Put your email address.
 2. Put a password (at least 10 characters). You must:
@@ -26,17 +26,15 @@
 {% endstep %}
 
 {% step %}
-### Verification
+#### Verification
 
-1. Go to your  email inbox and click “Verify.”
-2. You will be directed to the website.&#x20;
-   1. If not, click: [https://posit.cloud](https://posit.cloud/plans/free).&#x20;
+1. Go to your email inbox and click “Verify.”
+2. You will be directed to the website.
+   1. If not, click: [https://posit.cloud](https://posit.cloud/plans/free).
 {% endstep %}
 
 {% step %}
-### Create a new project (RStudio labs)
-
-
+#### Create a new project (RStudio labs)
 
 1. Click "New Project."
 2. Choose "New RStudio Project."
@@ -53,7 +51,7 @@ Many users mistakenly create a separate project for each lab. **This is incorrec
 {% endstep %}
 
 {% step %}
-### Download the specific R script file to install packages and load GSS data
+#### Download the specific R script file to install packages and load GSS data
 
 1. Copy the code below.
 2. Paste it into RStudio console.
@@ -67,21 +65,17 @@ file.edit("0_installing_packages.R")
 ```
 
 <figure><img src="../.gitbook/assets/copy_paste_enter.png" alt=""><figcaption></figcaption></figure>
-
 {% endstep %}
 
 {% step %}
-### Wait
+#### Wait
 
-This process will install all the packages we’ll be using throughout the modules. This process may take **15-20 minutes** or shorter depending on your internet connection. This is a one-time process.
+This process will install all the packages we’ll be using throughout the modules. This process may take **5-10 minutes** or shorter depending on your internet connection. This is a one-time process.
 
 You won't wait this long again during the semester.
 
 1. You will see a STOP sign.
 2. And, codes are running in the console. You should wait until the 🛑 <mark style="background-color:$danger;">STOP</mark> 🛑 sign in the console disappears and no more code is running in the console.
-3. When you see the script file opens and, "gss" and "key" appears under the "Environment" - Data section, everything is all set.
-
-<figure><img src="../.gitbook/assets/stop_install_load (1).png" alt=""><figcaption></figcaption></figure>
+3. When you see the script file opens and, "data" appears under the "Environment - Data section," everything is all set.
 {% endstep %}
 {% endstepper %}
-
