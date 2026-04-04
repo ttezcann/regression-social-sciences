@@ -64,7 +64,7 @@ You won't wait this long again during the semester.
 2. And, codes are running in the console. You should wait until the 🛑 <mark style="background-color:$danger;">STOP</mark> 🛑 sign in the console disappears and no more code is running in the console.
 3. When you see the script file opens and, "gss" and "key" appears under the "Environment" - Data section, everything is all set.
 
-<figure><img src="../.gitbook/assets/stop_install_load (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="/broken/files/MCdtjL7j0q17HGLRUbhB" alt=""><figcaption></figcaption></figure>
 {% endstep %}
 {% endstepper %}
 
