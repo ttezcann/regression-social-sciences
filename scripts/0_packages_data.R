@@ -1,5 +1,25 @@
-library(haven)
+# Load GSS data----
+temp <- tempfile(fileext = ".dta")
+download.file("https://raw.githubusercontent.com/ttezcann/regression-social-sciences/main/data/gss.dta", temp, mode = "wb")
+gss <- haven::read_dta(temp)
+invisible(capture.output(suppressMessages(suppressWarnings(
+  source(url("https://raw.githubusercontent.com/ttezcann/regression-social-sciences/main/scripts/0_relabel.R"))
+))))
 
+# Install and load packages----
+while (dev.cur() > 1) dev.off()
+packages <- c("corrplot", "patchwork", "Hmisc", "haven",
+              "parameters", "performance", "psych", 
+              "see", "sjlabelled", "sjmisc", 
+              "sjPlot", "ggpubr", "tidyverse", "gt")
+for (pkg in packages) {if (!requireNamespace(pkg, quietly = TRUE)) {
+  message("Installing package: ", pkg)
+  install.packages(pkg, dependencies = c("Depends", "Imports"))} else {
+    message("Package already installed: ", pkg)}
+  (library(pkg, character.only = TRUE))}
+
+invisible(capture.output(suppressMessages(suppressWarnings({
+# Relabel----
 # ============================================================
 # TABLE 1. Basic Demographics — Sociodemographics
 # ============================================================
@@ -611,3 +631,4 @@ attr(gss$raclive, "labels") <- c("Yes" = 1, "No" = 2)
 
 attr(gss$spanking, "label") <- "Favoring spanking children to discipline"
 attr(gss$spanking, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Disagree" = 3, "Strongly disagree" = 4)
+}))))
