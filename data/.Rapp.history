@@ -1,0 +1,3 @@
+load("/Users/ttezcan/Sync/09_github/regression-social-sciences/data/gss.RData")
+load("/Users/ttezcan/Sync/09_github/regression-social-sciences/data/gss.rds")
+load("/Users/ttezcan/Sync/09_github/regression-social-sciences/data/gss.rds")
