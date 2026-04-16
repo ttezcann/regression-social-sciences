@@ -15,6 +15,26 @@ for (pkg in packages) {if (!requireNamespace(pkg, quietly = TRUE)) {
     message("Package already installed: ", pkg)}
   (library(pkg, character.only = TRUE))}
 
+if (requireNamespace("rstudioapi", quietly = TRUE) &&
+    rstudioapi::isAvailable()) {
+  try(
+    rstudioapi::writeRStudioPreference("reindent_on_paste", FALSE),
+    silent = TRUE
+  )
+}
+
+# Turn off auto-indent code after paste----
+set_course_editor_prefs <- TRUE
+
+if (set_course_editor_prefs &&
+    requireNamespace("rstudioapi", quietly = TRUE) &&
+    rstudioapi::isAvailable()) {
+  try(
+    rstudioapi::writeRStudioPreference("reindent_on_paste", FALSE),
+    silent = TRUE
+  )
+}
+
 invisible(capture.output(suppressMessages(suppressWarnings({
 # Relabel----
 # ============================================================
