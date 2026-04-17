@@ -15,14 +15,6 @@ for (pkg in packages) {if (!requireNamespace(pkg, quietly = TRUE)) {
     message("Package already installed: ", pkg)}
   (library(pkg, character.only = TRUE))}
 
-if (requireNamespace("rstudioapi", quietly = TRUE) &&
-    rstudioapi::isAvailable()) {
-  try(
-    rstudioapi::writeRStudioPreference("reindent_on_paste", FALSE),
-    silent = TRUE
-  )
-}
-
 # Turn off auto-indent code after paste----
 set_course_editor_prefs <- TRUE
 
@@ -169,6 +161,10 @@ attr(gss$finalter, "labels") <- c("Better" = 1, "Worse" = 2, "Stayed same" = 3)
 attr(gss$parsol, "label") <- "Level of higher living standard compared to parents"
 attr(gss$parsol, "labels") <- c("Much better" = 1, "Somewhat better" = 2, "About the same" = 3,
                                 "Somewhat worse" = 4, "Much worse" = 5)
+
+attr(gss$health, "label") <- "Perceived personal health quality"
+attr(gss$health, "labels") <- c("Excellent" = 1, "Very Good" = 2, "Good" = 3,
+                                "Fair" = 4, "Poor" = 5)
 
 # ============================================================
 # TABLE 5. Social Life
