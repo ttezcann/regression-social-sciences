@@ -29,20 +29,54 @@ if (set_course_editor_prefs &&
 
 # Wrappers----
 
+
 t.test <- function(x, ...) {
   result <- stats::t.test(x, ...)
   args <- list(...)
-  
+
   if (inherits(x, "formula") && !is.null(args$data)) {
-    outcome_name <- all.vars(x)[1]
-    label <- attr(args$data[[outcome_name]], "label")
-    if (!is.null(label) && nzchar(label)) {
-      result$data.name <- sub(outcome_name, label, result$data.name, fixed = TRUE)
+    vars <- all.vars(x)
+    outcome_name <- vars[1]
+    group_name <- vars[2]
+
+    outcome_var <- args$data[[outcome_name]]
+    group_var <- args$data[[group_name]]
+
+    outcome_label <- attr(outcome_var, "label")
+    if (!is.null(outcome_label) && nzchar(outcome_label)) {
+      result$data.name <- sub(outcome_name, outcome_label, result$data.name, fixed = TRUE)
+    }
+
+    value_labels <- attr(group_var, "labels")
+
+    if (!is.null(value_labels) && !is.null(result$estimate)) {
+      est_names <- names(result$estimate)
+
+      code_to_label <- setNames(names(value_labels), as.character(unname(value_labels)))
+
+      new_names <- est_names
+
+      for (i in seq_along(est_names)) {
+        nm <- est_names[i]
+
+        m <- regexec("^mean in group (.+)$", nm)
+        regmatch <- regmatches(nm, m)[[1]]
+
+        if (length(regmatch) > 1) {
+          grp_code <- regmatch[2]
+          if (grp_code %in% names(code_to_label)) {
+            new_names[i] <- paste0(code_to_label[[grp_code]])
+          }
+        }
+      }
+
+      names(result$estimate) <- new_names
     }
   }
-  
+
   result
 }
+
 
 invisible(capture.output(suppressMessages(suppressWarnings({
 # Relabel----
@@ -54,19 +88,15 @@ attr(gss$age, "label") <- "Respondents' age"
 
 attr(gss$sex, "label") <- "Respondents' sex"
 attr(gss$sex, "labels") <- c("Male" = 1, "Female" = 2)
-gss$sex <- haven::as_factor(gss$sex)
 
 attr(gss$sexornt, "label") <- "Respondents' sexual orientation"
 attr(gss$sexornt, "labels") <- c("Gay, lesbian, or homosexual" = 1, "Bisexual" = 2, "Heterosexual or straight" = 3)
-gss$sexornt <- haven::as_factor(gss$sexornt)
 
 attr(gss$race, "label") <- "Respondents' race"
 attr(gss$race, "labels") <- c("White" = 1, "Black" = 2, "Other" = 3)
-gss$race <- haven::as_factor(gss$race)
 
 attr(gss$marital, "label") <- "Respondents' marital status"
 attr(gss$marital, "labels") <- c("Married" = 1, "Widowed" = 2, "Divorced" = 3, "Separated" = 4, "Never married" = 5)
-gss$marital <- haven::as_factor(gss$marital)
 
 attr(gss$childs, "label") <- "Number of children respondents have"
 
@@ -74,23 +104,19 @@ attr(gss$hompop, "label") <- "Number of persons in household"
 
 attr(gss$divorce, "label") <- "Respondents' divorce status"
 attr(gss$divorce, "labels") <- c("Yes" = 1, "No" = 2)
-gss$divorce <- haven::as_factor(gss$divorce)
 
 attr(gss$sibs, "label") <- "Number of brothers and sisters respondents have"
 
 attr(gss$born, "label") <- "Respondents' immigrant status"
 attr(gss$born, "labels") <- c("Yes" = 1, "No" = 2)
-gss$born <- haven::as_factor(gss$born)
 
 attr(gss$region, "label") <- "Respondents' region of residence"
 attr(gss$region, "labels") <- c("New England" = 1, "Middle Atlantic" = 2, "East North Central" = 3,
                                 "West North Central" = 4, "South Atlantic" = 5, "East South Central" = 6,
                                 "West South Central" = 7, "Mountain" = 8, "Pacific" = 9)
-gss$region <- haven::as_factor(gss$region)
 
 attr(gss$dwelown, "label") <- "Respondents' home ownership status"
 attr(gss$dwelown, "labels") <- c("Own or is buying" = 1, "Pays rent" = 2, "Other" = 3)
-gss$dwelown <- haven::as_factor(gss$dwelown)
 
 # ============================================================
 # TABLE 2. Socioeconomic Status and Political Views
@@ -101,7 +127,6 @@ attr(gss$educ, "label") <- "Respondents' education in years"
 attr(gss$degree, "label") <- "Respondents' education degree"
 attr(gss$degree, "labels") <- c("Less than high school" = 0, "High school" = 1, "Associate/junior college" = 2,
                                 "Bachelor's" = 3, "Graduate" = 4)
-gss$degree <- haven::as_factor(gss$degree)
 
 attr(gss$coninc, "label") <- "Respondents' family income"
 
@@ -120,7 +145,6 @@ attr(gss$partyid, "labels") <- c("Strong Democrat" = 0, "Not very strong Democra
                                  "Independent, close to Democrat" = 2, "Independent (neither, no response)" = 3,
                                  "Independent, close to Republican" = 4, "Not very strong Republican" = 5,
                                  "Strong Republican" = 6, "Other party" = 7)
-gss$partyid <- haven::as_factor(gss$partyid)
 
 attr(gss$polviews, "label") <- "Respondents' conservatism level"
 attr(gss$polviews, "labels") <- c("Extremely liberal" = 1, "Liberal" = 2, "Slightly liberal" = 3,
@@ -145,15 +169,12 @@ attr(gss$pasei10, "label") <- "Respondents' fathers' socio-economic index score"
 
 attr(gss$granborn, "label") <- "Number of grandparents born outside the United States"
 attr(gss$granborn, "labels") <- c("None" = 0, "One" = 1, "Two" = 2, "Three" = 3, "Four" = 4)
-gss$granborn <- haven::as_factor(gss$granborn)
 
 attr(gss$maborn, "label") <- "Respondents' mothers' immigration status"
 attr(gss$maborn, "labels") <- c("Yes" = 1, "No" = 2)
-gss$maborn <- haven::as_factor(gss$maborn)
 
 attr(gss$paborn, "label") <- "Respondents' fathers' immigration status"
 attr(gss$paborn, "labels") <- c("Yes" = 1, "No" = 2)
-gss$paborn <- haven::as_factor(gss$paborn)
 
 attr(gss$res16, "label") <- "Population density of residence during adolescence years"
 attr(gss$res16, "labels") <- c("Country, nonfarm" = 1, "Farm" = 2, "Town less than 50K" = 3,
@@ -163,13 +184,11 @@ attr(gss$reg16, "label") <- "Region of residence during adolescence years"
 attr(gss$reg16, "labels") <- c("Foreign country" = 0, "New England" = 1, "Middle Atlantic" = 2,
                                "East North Central" = 3, "West North Central" = 4, "South Atlantic" = 5,
                                "East South Central" = 6, "West South Central" = 7, "Mountain" = 8, "Pacific" = 9)
-gss$reg16 <- haven::as_factor(gss$reg16)
 
 attr(gss$family16, "label") <- "Parental cohabitation status during adolescence years"
 attr(gss$family16, "labels") <- c("Other" = 0, "Mother and father" = 1, "Father and stepmother" = 2,
                                   "Mother and stepfather" = 3, "Father" = 4, "Mother" = 5,
                                   "Male relative" = 6, "Female relative" = 7, "Male and female relatives" = 8)
-gss$family16 <- haven::as_factor(gss$family16)
 
 attr(gss$incom16, "label") <- "Self-assessment of family wealth relative to societal average during adolescence years"
 attr(gss$incom16, "labels") <- c("Far below average" = 1, "Below average" = 2, "Average" = 3,
@@ -189,7 +208,6 @@ attr(gss$finrela, "labels") <- c("Far below average" = 1, "Below average" = 2, "
 
 attr(gss$finalter, "label") <- "Perceived change in financial situation"
 attr(gss$finalter, "labels") <- c("Better" = 1, "Worse" = 2, "Stayed same" = 3)
-gss$finalter <- haven::as_factor(gss$finalter)
 
 attr(gss$parsol, "label") <- "Level of higher living standard compared to parents"
 attr(gss$parsol, "labels") <- c("Much better" = 1, "Somewhat better" = 2, "About the same" = 3,
@@ -232,11 +250,9 @@ attr(gss$wrkstat, "labels") <- c("Working full time" = 1, "Working part time" = 
                                  "With a job, but not at work because of temporary illness, vacation, strike" = 3,
                                  "Unemployed, laid off, looking for work" = 4, "Retired" = 5,
                                  "In school" = 6, "Keeping house" = 7, "Other" = 8)
-gss$wrkstat <- haven::as_factor(gss$wrkstat)
 
 attr(gss$wrkslf, "label") <- "Respondents' employment status"
 attr(gss$wrkslf, "labels") <- c("Self employed" = 1, "For someone else" = 2)
-gss$wrkslf <- haven::as_factor(gss$wrkslf)
 
 attr(gss$weekswrk, "label") <- "Weeks respondents worked last year"
 
@@ -252,19 +268,15 @@ attr(gss$earnrs, "label") <- "Number of family members who earned money last yea
 
 attr(gss$racdif1, "label") <- "Attribution of racial inequality to discrimination"
 attr(gss$racdif1, "labels") <- c("Yes" = 1, "No" = 2)
-gss$racdif1 <- haven::as_factor(gss$racdif1)
 
 attr(gss$racdif2, "label") <- "Attribution of racial inequality to in-born ability"
 attr(gss$racdif2, "labels") <- c("Yes" = 1, "No" = 2)
-gss$racdif2 <- haven::as_factor(gss$racdif2)
 
 attr(gss$racdif3, "label") <- "Attribution of racial inequality to lack of education"
 attr(gss$racdif3, "labels") <- c("Yes" = 1, "No" = 2)
-gss$racdif3 <- haven::as_factor(gss$racdif3)
 
 attr(gss$racdif4, "label") <- "Attribution of racial inequality to lack of motivation"
 attr(gss$racdif4, "labels") <- c("Yes" = 1, "No" = 2)
-gss$racdif4 <- haven::as_factor(gss$racdif4)
 
 attr(gss$disrspct, "label") <- "Frequency of being treated with less courtesy or respect"
 attr(gss$disrspct, "labels") <- c("Almost every day" = 1, "At least once a week" = 2, "A few times a month" = 3,
@@ -321,67 +333,51 @@ attr(gss$helpoth, "labels") <- c("Most important" = 1, "Second important" = 2, "
 
 attr(gss$natspac, "label") <- "Support level for government spending on space exploration"
 attr(gss$natspac, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natspac <- haven::as_factor(gss$natspac)
 
 attr(gss$natenvir, "label") <- "Support level for government spending on environment"
 attr(gss$natenvir, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natenvir <- haven::as_factor(gss$natenvir)
 
 attr(gss$natheal, "label") <- "Support level for government spending on the nation's health"
 attr(gss$natheal, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natheal <- haven::as_factor(gss$natheal)
 
 attr(gss$natcity, "label") <- "Support level for government spending for solving problems of big cities"
 attr(gss$natcity, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natcity <- haven::as_factor(gss$natcity)
 
 attr(gss$natcrime, "label") <- "Support level for government spending for halting the rising crime rate"
 attr(gss$natcrime, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natcrime <- haven::as_factor(gss$natcrime)
 
 attr(gss$natdrug, "label") <- "Support level for government spending for dealing with drug addiction"
 attr(gss$natdrug, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natdrug <- haven::as_factor(gss$natdrug)
 
 attr(gss$nateduc, "label") <- "Support level for government spending for improving the nation's education system"
 attr(gss$nateduc, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$nateduc <- haven::as_factor(gss$nateduc)
 
 attr(gss$natrace, "label") <- "Support level for government spending for improving the conditions of Black people"
 attr(gss$natrace, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natrace <- haven::as_factor(gss$natrace)
 
 attr(gss$natarms, "label") <- "Support level for government spending for military, armaments, and defense"
 attr(gss$natarms, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natarms <- haven::as_factor(gss$natarms)
 
 attr(gss$nataid, "label") <- "Support level for government spending for foreign aid"
 attr(gss$nataid, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$nataid <- haven::as_factor(gss$nataid)
 
 attr(gss$natfare, "label") <- "Support level for government spending for welfare"
 attr(gss$natfare, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natfare <- haven::as_factor(gss$natfare)
 
 attr(gss$natroad, "label") <- "Support level for government spending for highways and bridges"
 attr(gss$natroad, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natroad <- haven::as_factor(gss$natroad)
 
 attr(gss$natsoc, "label") <- "Support level for government spending for social security"
 attr(gss$natsoc, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natsoc <- haven::as_factor(gss$natsoc)
 
 attr(gss$natchld, "label") <- "Support level for government spending for assistance for childcare"
 attr(gss$natchld, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natchld <- haven::as_factor(gss$natchld)
 
 attr(gss$natsci, "label") <- "Support level for government spending for supporting scientific research"
 attr(gss$natsci, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natsci <- haven::as_factor(gss$natsci)
 
 attr(gss$natenrgy, "label") <- "Support level for government spending for developing alternative energy sources"
 attr(gss$natenrgy, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
-gss$natenrgy <- haven::as_factor(gss$natenrgy)
 
 # ============================================================
 # TABLE 10. Civil Liberties — Freedom of Speech
@@ -389,51 +385,39 @@ gss$natenrgy <- haven::as_factor(gss$natenrgy)
 
 attr(gss$spkath, "label") <- "Support for allowing an anti-religionist person to make a speech"
 attr(gss$spkath, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$spkath <- haven::as_factor(gss$spkath)
 
 attr(gss$colath, "label") <- "Support for allowing an anti-religionist person to teach in a college"
 attr(gss$colath, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$colath <- haven::as_factor(gss$colath)
 
 attr(gss$libath, "label") <- "Support for keeping a book by an anti-religionist person in the public library"
 attr(gss$libath, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$libath <- haven::as_factor(gss$libath)
 
 attr(gss$spkrac, "label") <- "Support for allowing a racist person to make a speech"
 attr(gss$spkrac, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$spkrac <- haven::as_factor(gss$spkrac)
 
 attr(gss$colrac, "label") <- "Support for allowing a racist person to teach in a college"
 attr(gss$colrac, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$colrac <- haven::as_factor(gss$colrac)
 
 attr(gss$librac, "label") <- "Support for keeping a book by a racist person in the public library"
 attr(gss$librac, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$librac <- haven::as_factor(gss$librac)
 
 attr(gss$spkcom, "label") <- "Support for allowing a communist person to make a speech"
 attr(gss$spkcom, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$spkcom <- haven::as_factor(gss$spkcom)
 
 attr(gss$colcom, "label") <- "Support for allowing a communist person to teach in a college"
 attr(gss$colcom, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$colcom <- haven::as_factor(gss$colcom)
 
 attr(gss$libcom, "label") <- "Support for keeping a book by a communist person in the public library"
 attr(gss$libcom, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$libcom <- haven::as_factor(gss$libcom)
 
 attr(gss$spkmslm, "label") <- "Support for allowing a Muslim clergyman preaching hatred of the United States to make a speech"
 attr(gss$spkmslm, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$spkmslm <- haven::as_factor(gss$spkmslm)
 
 attr(gss$colmslm, "label") <- "Support for allowing a Muslim clergyman preaching hatred of the United States to teach in a college"
 attr(gss$colmslm, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$colmslm <- haven::as_factor(gss$colmslm)
 
 attr(gss$libmslm, "label") <- "Support for keeping a book by a Muslim clergyman preaching hatred of the United States in the public library"
 attr(gss$libmslm, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
-gss$libmslm <- haven::as_factor(gss$libmslm)
 
 # ============================================================
 # TABLE 11. Abortion and Birth Control
@@ -441,35 +425,27 @@ gss$libmslm <- haven::as_factor(gss$libmslm)
 
 attr(gss$abdefect, "label") <- "Support for abortion in cases of potential birth defects"
 attr(gss$abdefect, "labels") <- c("Yes" = 1, "No" = 2)
-gss$abdefect <- haven::as_factor(gss$abdefect)
 
 attr(gss$abnomore, "label") <- "Support for abortion for family planning reasons"
 attr(gss$abnomore, "labels") <- c("Yes" = 1, "No" = 2)
-gss$abnomore <- haven::as_factor(gss$abnomore)
 
 attr(gss$abhlth, "label") <- "Support for abortion for maternal health reasons"
 attr(gss$abhlth, "labels") <- c("Yes" = 1, "No" = 2)
-gss$abhlth <- haven::as_factor(gss$abhlth)
 
 attr(gss$abpoor, "label") <- "Support for abortion for economic reasons"
 attr(gss$abpoor, "labels") <- c("Yes" = 1, "No" = 2)
-gss$abpoor <- haven::as_factor(gss$abpoor)
 
 attr(gss$abrape, "label") <- "Support for abortion in cases of rape"
 attr(gss$abrape, "labels") <- c("Yes" = 1, "No" = 2)
-gss$abrape <- haven::as_factor(gss$abrape)
 
 attr(gss$absingle, "label") <- "Support for abortion in cases of non-marital pregnancy"
 attr(gss$absingle, "labels") <- c("Yes" = 1, "No" = 2)
-gss$absingle <- haven::as_factor(gss$absingle)
 
 attr(gss$abany, "label") <- "Support level for unrestricted abortion rights"
 attr(gss$abany, "labels") <- c("Yes" = 1, "No" = 2)
-gss$abany <- haven::as_factor(gss$abany)
 
 attr(gss$pillok, "label") <- "Support level for providing birth control to teens (14-16) without parent approval"
 attr(gss$pillok, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Disagree" = 3, "Strongly disagree" = 4)
-gss$pillok <- haven::as_factor(gss$pillok)
 
 # ============================================================
 # TABLE 12. Affirmative Action
@@ -478,32 +454,26 @@ gss$pillok <- haven::as_factor(gss$pillok)
 attr(gss$affrmact, "label") <- "Support level for preferential hiring and promotion policies for Black people"
 attr(gss$affrmact, "labels") <- c("Strongly favors" = 1, "Not strongly favors" = 2,
                                   "Not strongly opposes" = 3, "Strongly opposes" = 4)
-gss$affrmact <- haven::as_factor(gss$affrmact)
 
 attr(gss$fejobaff, "label") <- "Support level for preferential hiring and promotion policies for women"
 attr(gss$fejobaff, "labels") <- c("Strongly favors" = 1, "Not strongly favors" = 2,
                                   "Not strongly opposes" = 3, "Strongly opposes" = 4)
-gss$fejobaff <- haven::as_factor(gss$fejobaff)
 
 attr(gss$discaffm, "label") <- "Concern level for gender-based employment discrimination against men"
 attr(gss$discaffm, "labels") <- c("Very likely" = 1, "Somewhat likely" = 2,
                                   "Somewhat unlikely" = 3, "Very unlikely" = 4)
-gss$discaffm <- haven::as_factor(gss$discaffm)
 
 attr(gss$discaffw, "label") <- "Concern level for gender-based employment discrimination against women"
 attr(gss$discaffw, "labels") <- c("Very likely" = 1, "Somewhat likely" = 2,
                                   "Somewhat unlikely" = 3, "Very unlikely" = 4)
-gss$discaffw <- haven::as_factor(gss$discaffw)
 
 attr(gss$discaff, "label") <- "Concern level for reverse discrimination in employment"
 attr(gss$discaff, "labels") <- c("Very likely" = 1, "Somewhat likely" = 2,
                                  "Somewhat unlikely" = 3, "Very unlikely" = 4)
-gss$discaff <- haven::as_factor(gss$discaff)
 
 attr(gss$fehire, "label") <- "Support level for special efforts to hire and promote qualified women"
 attr(gss$fehire, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
                                 "Disagree" = 4, "Strongly disagree" = 5)
-gss$fehire <- haven::as_factor(gss$fehire)
 
 # ============================================================
 # TABLE 13. Religion
@@ -533,15 +503,12 @@ attr(gss$sprtprsn, "labels") <- c("Very spiritual" = 1, "Moderately spiritual" =
 
 attr(gss$postlife, "label") <- "Belief in life after death"
 attr(gss$postlife, "labels") <- c("Yes" = 1, "No" = 2)
-gss$postlife <- haven::as_factor(gss$postlife)
 
 attr(gss$prayer, "label") <- "Agreement with the prohibition of mandated Bible readings in schools"
 attr(gss$prayer, "labels") <- c("Approve" = 1, "Disapprove" = 2)
-gss$prayer <- haven::as_factor(gss$prayer)
 
 attr(gss$bible, "label") <- "Feelings about the Bible"
 attr(gss$bible, "labels") <- c("Word of God" = 1, "Inspired word" = 2, "Ancient book" = 3, "Other" = 4)
-gss$bible <- haven::as_factor(gss$bible)
 
 # ============================================================
 # TABLE 14. Intermarriage Attitudes
@@ -585,29 +552,23 @@ attr(gss$letin1a, "labels") <- c("Increased a lot" = 1, "Increased a little" = 2
 
 attr(gss$happy, "label") <- "Happiness level"
 attr(gss$happy, "labels") <- c("Very happy" = 1, "Pretty happy" = 2, "Not too happy" = 3)
-gss$happy <- haven::as_factor(gss$happy)
 
 attr(gss$hapmar, "label") <- "Marriage happiness level"
 attr(gss$hapmar, "labels") <- c("Very happy" = 1, "Pretty happy" = 2, "Not too happy" = 3)
-gss$hapmar <- haven::as_factor(gss$hapmar)
 
 attr(gss$hapcohab, "label") <- "Relationship happiness level"
 attr(gss$hapcohab, "labels") <- c("Very happy" = 1, "Pretty happy" = 2, "Not too happy" = 3)
-gss$hapcohab <- haven::as_factor(gss$hapcohab)
 
 attr(gss$life, "label") <- "Level of finding life exciting"
 attr(gss$life, "labels") <- c("Exciting" = 1, "Routine" = 2, "Dull" = 3)
-gss$life <- haven::as_factor(gss$life)
 
 attr(gss$satjob, "label") <- "Level of work satisfaction"
 attr(gss$satjob, "labels") <- c("Very satisfied" = 1, "Moderately satisfied" = 2,
                                 "A little dissatisfied" = 3, "Very dissatisfied" = 4)
-gss$satjob <- haven::as_factor(gss$satjob)
 
 attr(gss$satfin, "label") <- "Level of financial satisfaction"
 attr(gss$satfin, "labels") <- c("Pretty well satisfied" = 1, "More or less satisfied" = 2,
                                 "Not satisfied at all" = 3)
-gss$satfin <- haven::as_factor(gss$satfin)
 
 # ============================================================
 # TABLE 17. Technology and Media Use
@@ -621,7 +582,6 @@ attr(gss$tvhours, "label") <- "Television screen time in hours"
 
 attr(gss$compuse, "label") <- "Use of computer"
 attr(gss$compuse, "labels") <- c("Yes" = 1, "No" = 2)
-gss$compuse <- haven::as_factor(gss$compuse)
 
 # ============================================================
 # TABLE 18. Confidence in Institutions
@@ -629,55 +589,42 @@ gss$compuse <- haven::as_factor(gss$compuse)
 
 attr(gss$confinan, "label") <- "Confidence level in banks and financial institutions"
 attr(gss$confinan, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$confinan <- haven::as_factor(gss$confinan)
 
 attr(gss$conbus, "label") <- "Confidence level in major companies"
 attr(gss$conbus, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$conbus <- haven::as_factor(gss$conbus)
 
 attr(gss$conclerg, "label") <- "Confidence level in organized religion"
 attr(gss$conclerg, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$conclerg <- haven::as_factor(gss$conclerg)
 
 attr(gss$coneduc, "label") <- "Confidence level in education"
 attr(gss$coneduc, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$coneduc <- haven::as_factor(gss$coneduc)
 
 attr(gss$confed, "label") <- "Confidence level in executive branch of the federal government"
 attr(gss$confed, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$confed <- haven::as_factor(gss$confed)
 
 attr(gss$conlabor, "label") <- "Confidence level in organized labor"
 attr(gss$conlabor, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$conlabor <- haven::as_factor(gss$conlabor)
 
 attr(gss$conpress, "label") <- "Confidence level in press"
 attr(gss$conpress, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$conpress <- haven::as_factor(gss$conpress)
 
 attr(gss$conmedic, "label") <- "Confidence level in medicine"
 attr(gss$conmedic, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$conmedic <- haven::as_factor(gss$conmedic)
 
 attr(gss$contv, "label") <- "Confidence level in television"
 attr(gss$contv, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$contv <- haven::as_factor(gss$contv)
 
 attr(gss$conjudge, "label") <- "Confidence level in Supreme Court"
 attr(gss$conjudge, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$conjudge <- haven::as_factor(gss$conjudge)
 
 attr(gss$consci, "label") <- "Confidence level in scientific community"
 attr(gss$consci, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$consci <- haven::as_factor(gss$consci)
 
 attr(gss$conlegis, "label") <- "Confidence level in congress"
 attr(gss$conlegis, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$conlegis <- haven::as_factor(gss$conlegis)
 
 attr(gss$conarmy, "label") <- "Confidence level in military"
 attr(gss$conarmy, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
-gss$conarmy <- haven::as_factor(gss$conarmy)
 
 # ============================================================
 # TABLE 19. Family and Gender Roles
@@ -686,17 +633,14 @@ gss$conarmy <- haven::as_factor(gss$conarmy)
 attr(gss$meovrwrk, "label") <- "Level of agreement with the negative impact of men's work commitment on family life"
 attr(gss$meovrwrk, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
                                   "Disagree" = 4, "Strongly disagree" = 5)
-gss$meovrwrk <- haven::as_factor(gss$meovrwrk)
 
 attr(gss$fechld, "label") <- "Level of agreement with the capability of working mothers to establish a warm and secure relationship with their children"
 attr(gss$fechld, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
                                 "Disagree" = 4, "Strongly disagree" = 5)
-gss$fechld <- haven::as_factor(gss$fechld)
 
 attr(gss$fefam, "label") <- "Level of agreement with the belief that traditional gender roles are best for everyone involved"
 attr(gss$fefam, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
                                "Disagree" = 4, "Strongly disagree" = 5)
-gss$fefam <- haven::as_factor(gss$fefam)
 
 # ============================================================
 # TABLE 20. Police Abuse
@@ -704,23 +648,18 @@ gss$fefam <- haven::as_factor(gss$fefam)
 
 attr(gss$polhitok, "label") <- "Support of police violence for some reason"
 attr(gss$polhitok, "labels") <- c("Yes" = 1, "No" = 2)
-gss$polhitok <- haven::as_factor(gss$polhitok)
 
 attr(gss$polabuse, "label") <- "Support of police violence if citizen said vulgar or obscene things"
 attr(gss$polabuse, "labels") <- c("Yes" = 1, "No" = 2)
-gss$polabuse <- haven::as_factor(gss$polabuse)
 
 attr(gss$polmurdr, "label") <- "Support of police violence if citizen questioned as murder suspect"
 attr(gss$polmurdr, "labels") <- c("Yes" = 1, "No" = 2)
-gss$polmurdr <- haven::as_factor(gss$polmurdr)
 
 attr(gss$polescap, "label") <- "Support of police violence if citizen attempting to escape custody"
 attr(gss$polescap, "labels") <- c("Yes" = 1, "No" = 2)
-gss$polescap <- haven::as_factor(gss$polescap)
 
 attr(gss$polattak, "label") <- "Support of police violence if citizen attacking policeman with fists"
 attr(gss$polattak, "labels") <- c("Yes" = 1, "No" = 2)
-gss$polattak <- haven::as_factor(gss$polattak)
 
 # ============================================================
 # TABLE 21. Miscellaneous
@@ -728,23 +667,18 @@ gss$polattak <- haven::as_factor(gss$polattak)
 
 attr(gss$fear, "label") <- "Sense of neighborhood security"
 attr(gss$fear, "labels") <- c("Yes" = 1, "No" = 2)
-gss$fear <- haven::as_factor(gss$fear)
 
 attr(gss$cappun, "label") <- "Views on death penalty"
 attr(gss$cappun, "labels") <- c("Favor" = 1, "Oppose" = 2)
-gss$cappun <- haven::as_factor(gss$cappun)
 
 attr(gss$gunlaw, "label") <- "Views on gun control measures"
 attr(gss$gunlaw, "labels") <- c("Favor" = 1, "Oppose" = 2)
-gss$gunlaw <- haven::as_factor(gss$gunlaw)
 
 attr(gss$owngun, "label") <- "Ownership of gun"
 attr(gss$owngun, "labels") <- c("Yes" = 1, "No" = 2, "Refused" = 3)
-gss$owngun <- haven::as_factor(gss$owngun)
 
 attr(gss$courts, "label") <- "Views on criminal justice adequacy"
 attr(gss$courts, "labels") <- c("Too harshly" = 1, "Not harshly enough" = 2, "About right" = 3)
-gss$courts <- haven::as_factor(gss$courts)
 
 attr(gss$homosex, "label") <- "Support level for sexual relations between two adults of the same sex"
 attr(gss$homosex, "labels") <- c("Always wrong" = 1, "Almost always wrong" = 2,
@@ -752,15 +686,12 @@ attr(gss$homosex, "labels") <- c("Always wrong" = 1, "Almost always wrong" = 2,
 
 attr(gss$grass, "label") <- "Views on legality of marijuana"
 attr(gss$grass, "labels") <- c("Should be legal" = 1, "Should not be legal" = 2)
-gss$grass <- haven::as_factor(gss$grass)
 
 attr(gss$sexeduc, "label") <- "Views on sex education in public schools"
 attr(gss$sexeduc, "labels") <- c("Favor" = 1, "Oppose" = 2)
-gss$sexeduc <- haven::as_factor(gss$sexeduc)
 
 attr(gss$raclive, "label") <- "Presence of racial diversity in the neighborhood"
 attr(gss$raclive, "labels") <- c("Yes" = 1, "No" = 2)
-gss$raclive <- haven::as_factor(gss$raclive)
 
 attr(gss$spanking, "label") <- "Favoring spanking children to discipline"
 attr(gss$spanking, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Disagree" = 3, "Strongly disagree" = 4)
