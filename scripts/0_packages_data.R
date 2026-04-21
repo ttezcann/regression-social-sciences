@@ -28,8 +28,32 @@ if (set_course_editor_prefs &&
 }
 
 # Wrappers----
+## descriptive table----
+descr_original <- descr
 
+descr <- function(x, ..., show = "short", out = "v") {
+  x_expr <- substitute(x)
+  x_name <- deparse(x_expr)
+  var_name <- sub(".*\\$", "", x_name)
 
+  x_value <- eval.parent(x_expr)
+  var_label <- attr(x_value, "label")
+
+  dat <- data.frame(tmp = x_value, check.names = FALSE)
+  names(dat) <- var_name
+
+  if (!is.null(var_label)) {
+    attr(dat[[var_name]], "label") <- var_label
+  }
+
+  if (identical(show, "short")) {
+    show <- c("n", "label", "NA.prc", "mean", "sd")
+  }
+
+  descr_original(dat, out = out, show = show, ...)
+}
+
+## ttest----
 t.test <- function(x, ...) {
   result <- stats::t.test(x, ...)
   args <- list(...)
@@ -252,7 +276,7 @@ attr(gss$wrkstat, "labels") <- c("Working full time" = 1, "Working part time" = 
                                  "In school" = 6, "Keeping house" = 7, "Other" = 8)
 
 attr(gss$wrkslf, "label") <- "Respondents' employment status"
-attr(gss$wrkslf, "labels") <- c("Self employed" = 1, "For someone else" = 2)
+attr(gss$wrkslf, "labels") <- c("Self employed" = 1, "Working for someone else" = 2)
 
 attr(gss$weekswrk, "label") <- "Weeks respondents worked last year"
 
