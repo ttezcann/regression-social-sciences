@@ -27,6 +27,7 @@ if (set_course_editor_prefs &&
   )
 }
 
+invisible(capture.output(suppressMessages(suppressWarnings({
 # Wrappers----
 ## descriptive table----
 descr_original <- descr
@@ -53,6 +54,53 @@ descr <- function(x, ..., show = "short", out = "v") {
   descr_original(dat, out = out, show = show, ...)
 }
 
+## chisquare----
+sjt.xtab <- function(...) {
+  result <- sjPlot::sjt.xtab(...)
+  
+  add_stars_to_html <- function(html) {
+    if (is.null(html) || !nzchar(html)) return(html)
+    
+    # Match p-value patterns: p=0.023, p<0.001, p&lt;0.001
+    pattern <- "p(=|&lt;|<)([0-9]*\\.?[0-9]+)"
+    m <- gregexpr(pattern, html)
+    matches <- regmatches(html, m)[[1]]
+    
+    if (length(matches) > 0) {
+      replacements <- vapply(matches, function(match) {
+        # Strip the "p=" / "p<" / "p&lt;" prefix to get the numeric value
+        num_str <- sub("p(=|&lt;|<)", "", match)
+        p_val <- suppressWarnings(as.numeric(num_str))
+        
+        if (is.na(p_val)) return(match)
+        
+        stars <- if (p_val < .001) "***"
+                 else if (p_val < .01) "**"
+                 else if (p_val < .05) "*"
+                 else if (p_val < .10) "."
+                 else ""
+        
+        paste0(match, stars)
+      }, character(1))
+      
+      regmatches(html, m)[[1]] <- replacements
+    }
+    
+    html
+  }
+  
+  if (!is.null(result$knitr)) {
+    result$knitr <- add_stars_to_html(result$knitr)
+  }
+  if (!is.null(result$page.content)) {
+    result$page.content <- add_stars_to_html(result$page.content)
+  }
+  if (!is.null(result$page.complete)) {
+    result$page.complete <- add_stars_to_html(result$page.complete)
+  }
+  
+  result
+}
 ## ttest----
 t.test <- function(x, ...) {
   result <- stats::t.test(x, ...)
@@ -101,8 +149,192 @@ t.test <- function(x, ...) {
   result
 }
 
+## parameters ----
+parameters <- function(model, ...) {
+  out <- parameters::model_parameters(model, ...)
+  
+  if ("p" %in% names(out)) {
+    out$Sig <- ifelse(out$p < .001, "***",
+               ifelse(out$p < .01,  "**",
+               ifelse(out$p < .05,  "*",
+               ifelse(out$p < .10,  ".", "ns"))))
+  }
+  
+  out
+}
 
-invisible(capture.output(suppressMessages(suppressWarnings({
+## correlation table----
+## tab_corr with stars ----
+tab_corr <- function(...) {
+  result <- sjPlot::tab_corr(...)
+  
+  add_stars_to_html <- function(html) {
+    if (is.null(html) || !nzchar(html)) return(html)
+    
+    # tab_corr formats p-values as (.023) or (&lt;.001) — leading zero stripped
+    pattern <- "\\((&lt;)?\\.([0-9]+)\\)"
+    m <- gregexpr(pattern, html)
+    matches <- regmatches(html, m)[[1]]
+    
+    if (length(matches) > 0) {
+      replacements <- vapply(matches, function(match) {
+        is_less_than <- grepl("&lt;", match)
+        # Extract digits after the dot
+        num_str <- sub("\\((&lt;)?\\.", "0.", sub("\\)$", "", match))
+        p_val <- suppressWarnings(as.numeric(num_str))
+        
+        if (is.na(p_val)) return(match)
+        # "<.001" means p is smaller than .001
+        if (is_less_than) p_val <- p_val - 1e-10
+        
+        stars <- if (p_val < .001) "***"
+                 else if (p_val < .01) "**"
+                 else if (p_val < .05) "*"
+                 else if (p_val < .10) "."
+                 else ""
+        
+        if (nzchar(stars)) paste0(match, stars) else match
+      }, character(1))
+      
+      regmatches(html, m)[[1]] <- replacements
+    }
+    
+    html
+  }
+  
+  if (!is.null(result$knitr)) {
+    result$knitr <- add_stars_to_html(result$knitr)
+  }
+  if (!is.null(result$page.content)) {
+    result$page.content <- add_stars_to_html(result$page.content)
+  }
+  if (!is.null(result$page.complete)) {
+    result$page.complete <- add_stars_to_html(result$page.complete)
+  }
+  
+  result
+}
+
+## correlation scatterplot----
+scatterplot <- function(data, xvar, yvar) {
+  ok <- stats::complete.cases(data[[xvar]], data[[yvar]])
+  test <- stats::cor.test(data[[xvar]][ok], data[[yvar]][ok])
+
+  stars <- if (test$p.value < .001) {
+    "***"
+  } else if (test$p.value < .01) {
+    "**"
+  } else if (test$p.value < .05) {
+    "*"
+  } else {
+    ""
+  }
+
+  label_text <- paste0(
+    "r = ", formatC(unname(test$estimate), format = "f", digits = 3),
+    ", p = ", formatC(test$p.value, format = "f", digits = 3),
+    stars
+  )
+
+  ggpubr::ggscatter(
+    data,
+    x = xvar,
+    y = yvar,
+    add = "loess",
+    conf.int = TRUE,
+    point = FALSE,
+    xlab = sjlabelled::get_label(data[[xvar]], def.value = xvar),
+    ylab = sjlabelled::get_label(data[[yvar]], def.value = yvar)
+  ) +
+    ggplot2::annotate(
+      "text",
+      x = -Inf, y = Inf,
+      label = label_text,
+      hjust = -0.1, vjust = 1.2
+    )
+}
+
+
+## Scatterplot matrix with p-values----
+
+pairs_panels_pval <- function(data, 
+                              color = "#1a5490",
+                              smooth = TRUE,
+                              ci = FALSE,
+                              max_points = 1000,
+                              cex_text = 1.6,     # bumped up from 1.3
+                              ...) {
+  
+  upper_panel <- function(x, y, ...) {
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    
+    ok <- complete.cases(x, y)
+    test <- suppressWarnings(cor.test(x[ok], y[ok]))
+    r <- test$estimate
+    p <- test$p.value
+    
+    r_txt <- paste0("r=", formatC(r, digits = 2, format = "f"))
+    stars <- if (p < .001) "***"
+             else if (p < .01)  "**"
+             else if (p < .05)  "*"
+             else if (p < .10)  "."
+             else ""
+    p_txt <- if (p < .001) "p<.001"
+             else paste0("p=", sub("^0", "", formatC(p, digits = 3, format = "f")))
+    
+    text(0.5, 0.62, r_txt, cex = cex_text, col = "black")
+    text(0.5, 0.30, paste0(p_txt, stars), cex = cex_text, col = "gray25")
+  }
+  
+  diag_panel <- function(x, ...) {
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(usr[1:2], 0, 1.5))
+    h <- hist(x, plot = FALSE)
+    rect(h$breaks[-length(h$breaks)], 0, 
+         h$breaks[-1], h$counts / max(h$counts),
+         col = color, border = "white")
+  }
+  
+  lower_panel <- function(x, y, ...) {
+    ok <- complete.cases(x, y)
+    if (sum(ok) < 3 || !smooth) return(invisible())
+    
+    xo <- x[ok]; yo <- y[ok]
+    n <- length(xo)
+    if (n > max_points) {
+      idx <- sample.int(n, max_points)
+      xs <- xo[idx]; ys <- yo[idx]
+    } else {
+      xs <- xo; ys <- yo
+    }
+    
+    fit <- try(loess(ys ~ xs, span = 0.75, degree = 1), silent = TRUE)
+    if (inherits(fit, "try-error")) return(invisible())
+    
+    ord <- order(xs)
+    lines(xs[ord], fitted(fit)[ord], col = color, lwd = 2.5)
+    
+    if (ci) {
+      pred <- predict(fit, se = TRUE)
+      lines(xs[ord], (pred$fit + 1.96 * pred$se.fit)[ord], 
+            col = color, lty = 2, lwd = 1)
+      lines(xs[ord], (pred$fit - 1.96 * pred$se.fit)[ord], 
+            col = color, lty = 2, lwd = 1)
+    }
+    
+    rm(fit, xs, ys); invisible(gc(verbose = FALSE))
+  }
+  
+  pairs(data,
+        upper.panel = upper_panel,
+        lower.panel = lower_panel,
+        diag.panel  = diag_panel,
+        gap = 0.3,
+        ...)
+}
+
+
 # Relabel----
 # ============================================================
 # TABLE 1. Basic Demographics — Sociodemographics
