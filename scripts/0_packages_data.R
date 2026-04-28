@@ -6,339 +6,230 @@ gss <- haven::read_dta(temp)
 # Install and load packages----
 while (dev.cur() > 1) dev.off()
 packages <- c("corrplot", "patchwork", "Hmisc", "haven",
-              "parameters", "performance", "psych", 
-              "see", "sjlabelled", "sjmisc", 
-              "sjPlot", "ggpubr", "tidyverse", "gt")
+"parameters", "performance", "psych", 
+"see", "sjlabelled", "sjmisc", 
+"sjPlot", "ggpubr", "tidyverse", "gt")
 for (pkg in packages) {if (!requireNamespace(pkg, quietly = TRUE)) {
-  message("Installing package: ", pkg)
-  install.packages(pkg, dependencies = c("Depends", "Imports"))} else {
-    message("Package already installed: ", pkg)}
-  (library(pkg, character.only = TRUE))}
+message("Installing package: ", pkg)
+install.packages(pkg, dependencies = c("Depends", "Imports"))} else {
+message("Package already installed: ", pkg)}
+(library(pkg, character.only = TRUE))}
 
 # Turn off auto-indent code after paste----
 set_course_editor_prefs <- TRUE
-
-if (set_course_editor_prefs &&
-    requireNamespace("rstudioapi", quietly = TRUE) &&
-    rstudioapi::isAvailable()) {
-  try(
-    rstudioapi::writeRStudioPreference("reindent_on_paste", FALSE),
-    silent = TRUE
-  )
-}
+if (set_course_editor_prefs && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  try(rstudioapi::writeRStudioPreference("reindent_on_paste", FALSE), silent = TRUE) }
 
 invisible(capture.output(suppressMessages(suppressWarnings({
-# Wrappers----
+# Helpers---
 ## descriptive table----
-descr_original <- descr
-
 descr <- function(x, ..., show = "short", out = "v") {
   x_expr <- substitute(x)
   x_name <- deparse(x_expr)
   var_name <- sub(".*\\$", "", x_name)
-
   x_value <- eval.parent(x_expr)
   var_label <- attr(x_value, "label")
-
   dat <- data.frame(tmp = x_value, check.names = FALSE)
   names(dat) <- var_name
-
-  if (!is.null(var_label)) {
-    attr(dat[[var_name]], "label") <- var_label
-  }
-
-  if (identical(show, "short")) {
-    show <- c("n", "label", "NA.prc", "mean", "sd")
-  }
-
-  descr_original(dat, out = out, show = show, ...)
-}
+  if (!is.null(var_label)) attr(dat[[var_name]], "label") <- var_label
+  if (identical(show, "short")) show <- c("n", "label", "NA.prc", "mean", "sd")
+  sjmisc::descr(dat, out = out, show = show, ...) }
 
 ## chisquare----
 sjt.xtab <- function(...) {
   result <- sjPlot::sjt.xtab(...)
-  
   add_stars_to_html <- function(html) {
     if (is.null(html) || !nzchar(html)) return(html)
-    
-    # Match p-value patterns: p=0.023, p<0.001, p&lt;0.001
     pattern <- "p(=|&lt;|<)([0-9]*\\.?[0-9]+)"
     m <- gregexpr(pattern, html)
     matches <- regmatches(html, m)[[1]]
-    
     if (length(matches) > 0) {
       replacements <- vapply(matches, function(match) {
-        # Strip the "p=" / "p<" / "p&lt;" prefix to get the numeric value
+        is_less_than <- grepl("&lt;|<", match) && !grepl("^p=", match)
         num_str <- sub("p(=|&lt;|<)", "", match)
         p_val <- suppressWarnings(as.numeric(num_str))
-        
         if (is.na(p_val)) return(match)
-        
-        stars <- if (p_val < .001) "***"
-                 else if (p_val < .01) "**"
-                 else if (p_val < .05) "*"
-                 else if (p_val < .10) "."
-                 else ""
-        
-        paste0(match, stars)
-      }, character(1))
-      
-      regmatches(html, m)[[1]] <- replacements
-    }
-    
-    html
-  }
-  
-  if (!is.null(result$knitr)) {
-    result$knitr <- add_stars_to_html(result$knitr)
-  }
-  if (!is.null(result$page.content)) {
-    result$page.content <- add_stars_to_html(result$page.content)
-  }
-  if (!is.null(result$page.complete)) {
-    result$page.complete <- add_stars_to_html(result$page.complete)
-  }
-  
-  result
-}
+        if (is_less_than) p_val <- p_val - 1e-10
+        stars <- if (p_val < .001) "***" else if (p_val < .01) "**" else if (p_val < .05) "*" else ""
+        display <- if (is_less_than) "p=0.000" else match
+        paste0(display, stars) }, character(1))
+      regmatches(html, m)[[1]] <- replacements }
+    html }
+  if (!is.null(result$knitr)) result$knitr <- add_stars_to_html(result$knitr)
+  if (!is.null(result$page.content)) result$page.content <- add_stars_to_html(result$page.content)
+  if (!is.null(result$page.complete)) result$page.complete <- add_stars_to_html(result$page.complete)
+  result }
+
 ## ttest----
 t.test <- function(x, ...) {
   result <- stats::t.test(x, ...)
   args <- list(...)
-
   if (inherits(x, "formula") && !is.null(args$data)) {
     vars <- all.vars(x)
     outcome_name <- vars[1]
     group_name <- vars[2]
-
     outcome_var <- args$data[[outcome_name]]
     group_var <- args$data[[group_name]]
-
     outcome_label <- attr(outcome_var, "label")
-    if (!is.null(outcome_label) && nzchar(outcome_label)) {
-      result$data.name <- sub(outcome_name, outcome_label, result$data.name, fixed = TRUE)
-    }
-
+    if (!is.null(outcome_label) && nzchar(outcome_label)) result$data.name <- sub(outcome_name, outcome_label, result$data.name, fixed = TRUE)
     value_labels <- attr(group_var, "labels")
-
     if (!is.null(value_labels) && !is.null(result$estimate)) {
       est_names <- names(result$estimate)
-
       code_to_label <- setNames(names(value_labels), as.character(unname(value_labels)))
-
       new_names <- est_names
-
       for (i in seq_along(est_names)) {
         nm <- est_names[i]
-
         m <- regexec("^mean in group (.+)$", nm)
         regmatch <- regmatches(nm, m)[[1]]
-
         if (length(regmatch) > 1) {
           grp_code <- regmatch[2]
-          if (grp_code %in% names(code_to_label)) {
-            new_names[i] <- paste0(code_to_label[[grp_code]])
-          }
-        }
-      }
-
-      names(result$estimate) <- new_names
-    }
-  }
-
-  result
-}
+          if (grp_code %in% names(code_to_label)) new_names[i] <- paste0(code_to_label[[grp_code]]) } }
+      names(result$estimate) <- new_names } }
+  result }
 
 ## parameters ----
 parameters <- function(model, ...) {
   out <- parameters::model_parameters(model, ...)
-  
   if ("p" %in% names(out)) {
-    out$Sig <- ifelse(out$p < .001, "***",
-               ifelse(out$p < .01,  "**",
-               ifelse(out$p < .05,  "*",
-               ifelse(out$p < .10,  ".", "ns"))))
-  }
-  
-  out
-}
+    out$Sig <- ifelse(out$p < .001, "***", ifelse(out$p < .01, "**", ifelse(out$p < .05, "*", ifelse(out$p < .10, ".", ""))))
+    attr(out, "pretty_p") <- formatC(out$p, digits = 3, format = "f") }
+  class(out) <- c("parameters_no_lt", class(out))
+  out }
+
+format.parameters_no_lt <- function(x, ...) {
+  out <- NextMethod()
+  if (!is.null(out$p)) out$p <- attr(x, "pretty_p") %||% out$p
+  out }
+
+print.parameters_no_lt <- function(x, ...) {
+  cls <- class(x)
+  class(x) <- cls[cls != "parameters_no_lt"]
+  out <- format(x, ...)
+  if (!is.null(attr(x, "pretty_p"))) {
+    # Replace <0.001 in the printed output too
+    print(out) }
+  else NextMethod() }
 
 ## correlation table----
-## tab_corr with stars ----
 tab_corr <- function(...) {
   result <- sjPlot::tab_corr(...)
-  
-  add_stars_to_html <- function(html) {
+  modify_html <- function(html) {
     if (is.null(html) || !nzchar(html)) return(html)
-    
-    # tab_corr formats p-values as (.023) or (&lt;.001) — leading zero stripped
-    pattern <- "\\((&lt;)?\\.([0-9]+)\\)"
-    m <- gregexpr(pattern, html)
+    p_pattern <- "\\((&lt;)?\\.([0-9]+)\\)"
+    m <- gregexpr(p_pattern, html)
     matches <- regmatches(html, m)[[1]]
-    
     if (length(matches) > 0) {
       replacements <- vapply(matches, function(match) {
         is_less_than <- grepl("&lt;", match)
-        # Extract digits after the dot
         num_str <- sub("\\((&lt;)?\\.", "0.", sub("\\)$", "", match))
         p_val <- suppressWarnings(as.numeric(num_str))
-        
         if (is.na(p_val)) return(match)
-        # "<.001" means p is smaller than .001
         if (is_less_than) p_val <- p_val - 1e-10
-        
-        stars <- if (p_val < .001) "***"
-                 else if (p_val < .01) "**"
-                 else if (p_val < .05) "*"
-                 else if (p_val < .10) "."
-                 else ""
-        
-        if (nzchar(stars)) paste0(match, stars) else match
-      }, character(1))
-      
-      regmatches(html, m)[[1]] <- replacements
-    }
-    
-    html
-  }
-  
-  if (!is.null(result$knitr)) {
-    result$knitr <- add_stars_to_html(result$knitr)
-  }
-  if (!is.null(result$page.content)) {
-    result$page.content <- add_stars_to_html(result$page.content)
-  }
-  if (!is.null(result$page.complete)) {
-    result$page.complete <- add_stars_to_html(result$page.complete)
-  }
-  
-  result
-}
+        stars <- if (p_val < .001) "***" else if (p_val < .01) "**" else if (p_val < .05) "*" else ""
+        if (is_less_than) paste0("p = 0.000", stars) else paste0("p = 0", sub("^\\(", "", sub("\\)$", "", match)), stars) }, character(1))
+      regmatches(html, m)[[1]] <- replacements }
+    r_pattern <- "(<td[^>]*class=\"tdata[^\"]*\"[^>]*>)(-?[01]?\\.[0-9]{2,3})(<br)"
+    html <- gsub(r_pattern, "\\1r = \\2\\3", html)
+    html }
+  if (!is.null(result$knitr)) result$knitr <- modify_html(result$knitr)
+  if (!is.null(result$page.content)) result$page.content <- modify_html(result$page.content)
+  if (!is.null(result$page.complete)) result$page.complete <- modify_html(result$page.complete)
+  result }
 
 ## correlation scatterplot----
 scatterplot <- function(data, xvar, yvar) {
   ok <- stats::complete.cases(data[[xvar]], data[[yvar]])
   test <- stats::cor.test(data[[xvar]][ok], data[[yvar]][ok])
-
-  stars <- if (test$p.value < .001) {
-    "***"
-  } else if (test$p.value < .01) {
-    "**"
-  } else if (test$p.value < .05) {
-    "*"
-  } else {
-    ""
-  }
-
-  label_text <- paste0(
-    "r = ", formatC(unname(test$estimate), format = "f", digits = 3),
-    ", p = ", formatC(test$p.value, format = "f", digits = 3),
-    stars
-  )
-
-  ggpubr::ggscatter(
-    data,
-    x = xvar,
-    y = yvar,
-    add = "loess",
-    conf.int = TRUE,
-    point = FALSE,
+  stars <- if (test$p.value < .001) "***" else if (test$p.value < .01) "**" else if (test$p.value < .05) "*" else ""
+  label_text <- paste0("r = ", formatC(unname(test$estimate), format = "f", digits = 3), ", p = ", formatC(test$p.value, format = "f", digits = 3), stars)
+  ggpubr::ggscatter(data, x = xvar, y = yvar, add = "loess", conf.int = TRUE, point = FALSE,
     xlab = sjlabelled::get_label(data[[xvar]], def.value = xvar),
-    ylab = sjlabelled::get_label(data[[yvar]], def.value = yvar)
-  ) +
-    ggplot2::annotate(
-      "text",
-      x = -Inf, y = Inf,
-      label = label_text,
-      hjust = -0.1, vjust = 1.2
-    )
-}
-
+    ylab = sjlabelled::get_label(data[[yvar]], def.value = yvar)) +
+    ggplot2::annotate("text", x = -Inf, y = Inf, label = label_text, hjust = -0.1, vjust = 1.2) }
 
 ## Scatterplot matrix with p-values----
-
-pairs_panels_pval <- function(data, 
-                              color = "#1a5490",
-                              smooth = TRUE,
-                              ci = FALSE,
-                              max_points = 1000,
-                              cex_text = 1.6,     # bumped up from 1.3
-                              ...) {
-  
+pairs_panels_pval <- function(data, color = "#1a5490", smooth = TRUE, ci = FALSE, max_points = 1000, cex_text = 1.6, ...) {
   upper_panel <- function(x, y, ...) {
     usr <- par("usr"); on.exit(par(usr))
     par(usr = c(0, 1, 0, 1))
-    
     ok <- complete.cases(x, y)
     test <- suppressWarnings(cor.test(x[ok], y[ok]))
     r <- test$estimate
     p <- test$p.value
-    
-    r_txt <- paste0("r=", formatC(r, digits = 2, format = "f"))
-    stars <- if (p < .001) "***"
-             else if (p < .01)  "**"
-             else if (p < .05)  "*"
-             else if (p < .10)  "."
-             else ""
-    p_txt <- if (p < .001) "p<.001"
-             else paste0("p=", sub("^0", "", formatC(p, digits = 3, format = "f")))
-    
+    r_txt <- paste0("r=", formatC(r, digits = 3, format = "f"))
+    stars <- if (p < .001) "***" else if (p < .01) "**" else if (p < .05) "*" else ""
+    p_txt <- paste0("p=", formatC(p, digits = 3, format = "f"))
     text(0.5, 0.62, r_txt, cex = cex_text, col = "black")
-    text(0.5, 0.30, paste0(p_txt, stars), cex = cex_text, col = "gray25")
-  }
-  
+    text(0.5, 0.30, paste0(p_txt, stars), cex = cex_text, col = "gray25") }
   diag_panel <- function(x, ...) {
     usr <- par("usr"); on.exit(par(usr))
     par(usr = c(usr[1:2], 0, 1.5))
     h <- hist(x, plot = FALSE)
-    rect(h$breaks[-length(h$breaks)], 0, 
-         h$breaks[-1], h$counts / max(h$counts),
-         col = color, border = "white")
-  }
-  
+    rect(h$breaks[-length(h$breaks)], 0, h$breaks[-1], h$counts / max(h$counts), col = color, border = "white") }
   lower_panel <- function(x, y, ...) {
     ok <- complete.cases(x, y)
     if (sum(ok) < 3 || !smooth) return(invisible())
-    
     xo <- x[ok]; yo <- y[ok]
     n <- length(xo)
-    if (n > max_points) {
-      idx <- sample.int(n, max_points)
-      xs <- xo[idx]; ys <- yo[idx]
-    } else {
-      xs <- xo; ys <- yo
-    }
-    
+    if (n > max_points) { idx <- sample.int(n, max_points); xs <- xo[idx]; ys <- yo[idx] } else { xs <- xo; ys <- yo }
     fit <- try(loess(ys ~ xs, span = 0.75, degree = 1), silent = TRUE)
     if (inherits(fit, "try-error")) return(invisible())
-    
     ord <- order(xs)
     lines(xs[ord], fitted(fit)[ord], col = color, lwd = 2.5)
-    
     if (ci) {
       pred <- predict(fit, se = TRUE)
-      lines(xs[ord], (pred$fit + 1.96 * pred$se.fit)[ord], 
-            col = color, lty = 2, lwd = 1)
-      lines(xs[ord], (pred$fit - 1.96 * pred$se.fit)[ord], 
-            col = color, lty = 2, lwd = 1)
-    }
-    
-    rm(fit, xs, ys); invisible(gc(verbose = FALSE))
-  }
-  
-  pairs(data,
-        upper.panel = upper_panel,
-        lower.panel = lower_panel,
-        diag.panel  = diag_panel,
-        gap = 0.3,
-        ...)
-}
+      lines(xs[ord], (pred$fit + 1.96 * pred$se.fit)[ord], col = color, lty = 2, lwd = 1)
+      lines(xs[ord], (pred$fit - 1.96 * pred$se.fit)[ord], col = color, lty = 2, lwd = 1) }
+    rm(fit, xs, ys); invisible(gc(verbose = FALSE)) }
+  pairs(data, upper.panel = upper_panel, lower.panel = lower_panel, diag.panel = diag_panel, gap = 0.3, ...) }
 
+## tab_model ----
+tab_model <- function(...) {
+  call <- match.call(expand.dots = TRUE)
+  call[[1]] <- quote(sjPlot::tab_model)
+  args <- list(...)
+  models <- Filter(function(a) inherits(a, c("lm", "glm")), args)
+  is_logit <- any(vapply(models, function(m) {
+    inherits(m, "glm") && isTRUE(m$family$family == "binomial")
+  }, logical(1)))
+  if (is.null(call$string.pred)) call$string.pred <- "Factors"
+  if (is.null(call$string.est) && !is_logit) call$string.est <- "Coeff."
+  if (is.null(call$string.std)) call$string.std <- if (is_logit) "std. OR" else "std. Coeff."
+  call$p.style <- "numeric"
+  result <- eval(call, envir = parent.frame())
+  add_stars_to_p <- function(html) {
+    if (is.null(html) || !nzchar(html)) return(html)
+    cell_pattern <- "<td class=\"tdata centeralign modelcolumn[0-9]+ col4\">[^<]*(<strong>)?(&lt;)?([0-9]*\\.[0-9]+)(</strong>)?</td>"
+    m <- gregexpr(cell_pattern, html)
+    matches <- regmatches(html, m)[[1]]
+    if (length(matches) > 0) {
+      replacements <- vapply(matches, function(match) {
+        is_less_than <- grepl("&lt;", match)
+        num_str <- sub(".*?(&lt;)?([0-9]*\\.[0-9]+).*", "\\2", match)
+        p_val <- suppressWarnings(as.numeric(num_str))
+        if (is.na(p_val)) return(match)
+        if (is_less_than) p_val <- p_val - 1e-10
+        stars <- if (p_val < .001) "***" else if (p_val < .01) "**" else if (p_val < .05) "*" else ""
+        cell_open <- sub("(<td[^>]*>).*", "\\1", match)
+        if (nzchar(stars)) paste0(cell_open, "<strong>", formatC(p_val + if (is_less_than) 1e-10 else 0, digits = 3, format = "f"), stars, "</strong></td>")
+        else paste0(cell_open, formatC(p_val, digits = 3, format = "f"), "</td>") }, character(1))
+      regmatches(html, m)[[1]] <- replacements }
+    html <- gsub("([A-Za-z])'([A-Za-z])", "\\1' \\2", html)
+    html }
+  if (!is.null(result$knitr)) result$knitr <- add_stars_to_p(result$knitr)
+  if (!is.null(result$page.content)) result$page.content <- add_stars_to_p(result$page.content)
+  if (!is.null(result$page.complete)) result$page.complete <- add_stars_to_p(result$page.complete)
+  result }
+
+## ifelse - dummy variable labeling----
+ifelse <- function(test, yes, no, label = NULL) {
+  result <- base::ifelse(test, yes, no)
+  if (!is.null(label)) attr(result, "label") <- label
+  result }
+    
 
 # Relabel----
-# ============================================================
-# TABLE 1. Basic Demographics — Sociodemographics
-# ============================================================
+## TABLE 1. Basic Demographics — Sociodemographics----
 
 attr(gss$age, "label") <- "Respondents' age"
 
@@ -374,9 +265,7 @@ attr(gss$region, "labels") <- c("New England" = 1, "Middle Atlantic" = 2, "East 
 attr(gss$dwelown, "label") <- "Respondents' home ownership status"
 attr(gss$dwelown, "labels") <- c("Own or is buying" = 1, "Pays rent" = 2, "Other" = 3)
 
-# ============================================================
-# TABLE 2. Socioeconomic Status and Political Views
-# ============================================================
+## TABLE 2. Socioeconomic Status and Political Views----
 
 attr(gss$educ, "label") <- "Respondents' education in years"
 
@@ -396,6 +285,10 @@ attr(gss$prestg10, "label") <- "Respondents' occupational prestige score"
 
 attr(gss$sppres10, "label") <- "Occupational prestige score of the respondents' spouses"
 
+attr(gss$class, "label") <- "Respondents' subjective class identification"
+attr(gss$class, "labels") <- c("Lower class" = 1, "Working class" = 2, "Middle class" = 3,
+                                  "Upper class" = 4, "No class" = 5)
+
 attr(gss$partyid, "label") <- "Respondents' political party affiliation"
 attr(gss$partyid, "labels") <- c("Strong Democrat" = 0, "Not very strong Democrat" = 1,
                                  "Independent, close to Democrat" = 2, "Independent (neither, no response)" = 3,
@@ -407,9 +300,7 @@ attr(gss$polviews, "labels") <- c("Extremely liberal" = 1, "Liberal" = 2, "Sligh
                                   "Moderate" = 4, "Slightly conservative" = 5, "Conservative" = 6,
                                   "Extremely conservative" = 7)
 
-# ============================================================
-# TABLE 3. Respondents' Parents and Adolescence Years
-# ============================================================
+## TABLE 3. Respondents' Parents and Adolescence Years----
 
 attr(gss$mapres10, "label") <- "Respondents' mothers' occupational prestige score"
 
@@ -450,9 +341,7 @@ attr(gss$incom16, "label") <- "Self-assessment of family wealth relative to soci
 attr(gss$incom16, "labels") <- c("Far below average" = 1, "Below average" = 2, "Average" = 3,
                                  "Above average" = 4, "Far above average" = 5)
 
-# ============================================================
-# TABLE 4. Quality of Life
-# ============================================================
+## TABLE 4. Quality of Life----
 
 attr(gss$goodlife, "label") <- "Level of optimism about economic opportunity"
 attr(gss$goodlife, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
@@ -473,9 +362,7 @@ attr(gss$health, "label") <- "Perceived personal health quality"
 attr(gss$health, "labels") <- c("Excellent" = 1, "Very Good" = 2, "Good" = 3,
                                 "Fair" = 4, "Poor" = 5)
 
-# ============================================================
-# TABLE 5. Social Life
-# ============================================================
+## TABLE 5. Social Life----
 
 attr(gss$socrel, "label") <- "Frequency of social evening with relatives"
 attr(gss$socrel, "labels") <- c("Almost daily" = 1, "Once or twice a week" = 2, "Several times a month" = 3,
@@ -497,9 +384,8 @@ attr(gss$socbar, "labels") <- c("Almost daily" = 1, "Once or twice a week" = 2, 
                                 "About once a month" = 4, "Several times a year" = 5, "About once a year" = 6,
                                 "Never" = 7)
 
-# ============================================================
-# TABLE 6. Work
-# ============================================================
+
+## TABLE 6. Work----
 
 attr(gss$wrkstat, "label") <- "Labor force status"
 attr(gss$wrkstat, "labels") <- c("Working full time" = 1, "Working part time" = 2,
@@ -518,9 +404,7 @@ attr(gss$hrs2, "label") <- "Number of hours respondents usually work"
 
 attr(gss$earnrs, "label") <- "Number of family members who earned money last year"
 
-# ============================================================
-# TABLE 7. Racial Inequality and Discrimination
-# ============================================================
+## TABLE 7. Racial Inequality and Discrimination----
 
 attr(gss$racdif1, "label") <- "Attribution of racial inequality to discrimination"
 attr(gss$racdif1, "labels") <- c("Yes" = 1, "No" = 2)
@@ -559,9 +443,7 @@ attr(gss$threaten, "labels") <- c("Almost every day" = 1, "At least once a week"
                                   "A few times a year" = 4, "Several times a year" = 5, "Less than once a year" = 6,
                                   "Never" = 7)
 
-# ============================================================
-# TABLE 8. Parenting Style
-# ============================================================
+## TABLE 8. Parenting Style----
 
 attr(gss$obey, "label") <- "Importance level of teaching children to obey"
 attr(gss$obey, "labels") <- c("Most important" = 1, "Second important" = 2, "Third important" = 3,
@@ -583,9 +465,7 @@ attr(gss$helpoth, "label") <- "Importance level of teaching children to help oth
 attr(gss$helpoth, "labels") <- c("Most important" = 1, "Second important" = 2, "Third important" = 3,
                                  "Fourth important" = 4, "Least important" = 5)
 
-# ============================================================
-# TABLE 9. Government Spending
-# ============================================================
+## TABLE 9. Government Spending----
 
 attr(gss$natspac, "label") <- "Support level for government spending on space exploration"
 attr(gss$natspac, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
@@ -635,9 +515,7 @@ attr(gss$natsci, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" 
 attr(gss$natenrgy, "label") <- "Support level for government spending for developing alternative energy sources"
 attr(gss$natenrgy, "labels") <- c("Too little" = 1, "About right" = 2, "Too much" = 3)
 
-# ============================================================
-# TABLE 10. Civil Liberties — Freedom of Speech
-# ============================================================
+## TABLE 10. Civil Liberties — Freedom of Speech----
 
 attr(gss$spkath, "label") <- "Support for allowing an anti-religionist person to make a speech"
 attr(gss$spkath, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
@@ -675,9 +553,7 @@ attr(gss$colmslm, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
 attr(gss$libmslm, "label") <- "Support for keeping a book by a Muslim clergyman preaching hatred of the United States in the public library"
 attr(gss$libmslm, "labels") <- c("Allowed" = 1, "Not allowed" = 2)
 
-# ============================================================
-# TABLE 11. Abortion and Birth Control
-# ============================================================
+## TABLE 11. Abortion and Birth Control----
 
 attr(gss$abdefect, "label") <- "Support for abortion in cases of potential birth defects"
 attr(gss$abdefect, "labels") <- c("Yes" = 1, "No" = 2)
@@ -703,9 +579,7 @@ attr(gss$abany, "labels") <- c("Yes" = 1, "No" = 2)
 attr(gss$pillok, "label") <- "Support level for providing birth control to teens (14-16) without parent approval"
 attr(gss$pillok, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Disagree" = 3, "Strongly disagree" = 4)
 
-# ============================================================
-# TABLE 12. Affirmative Action
-# ============================================================
+## TABLE 12. Affirmative Action----
 
 attr(gss$affrmact, "label") <- "Support level for preferential hiring and promotion policies for Black people"
 attr(gss$affrmact, "labels") <- c("Strongly favors" = 1, "Not strongly favors" = 2,
@@ -731,9 +605,7 @@ attr(gss$fehire, "label") <- "Support level for special efforts to hire and prom
 attr(gss$fehire, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
                                 "Disagree" = 4, "Strongly disagree" = 5)
 
-# ============================================================
-# TABLE 13. Religion
-# ============================================================
+## TABLE 13. Religion----
 
 attr(gss$god, "label") <- "Confidence in the existence of God"
 attr(gss$god, "labels") <- c("Don't believe" = 1, "Don't know, no way to find out" = 2,
@@ -766,9 +638,7 @@ attr(gss$prayer, "labels") <- c("Approve" = 1, "Disapprove" = 2)
 attr(gss$bible, "label") <- "Feelings about the Bible"
 attr(gss$bible, "labels") <- c("Word of God" = 1, "Inspired word" = 2, "Ancient book" = 3, "Other" = 4)
 
-# ============================================================
-# TABLE 14. Intermarriage Attitudes
-# ============================================================
+## TABLE 14. Intermarriage Attitudes----
 
 attr(gss$marblk, "label") <- "Favoring intermarriage with Black people"
 attr(gss$marblk, "labels") <- c("Strongly favor" = 1, "Favor" = 2, "Neither favor nor oppose" = 3,
@@ -786,9 +656,7 @@ attr(gss$marwht, "label") <- "Favoring intermarriage with White people"
 attr(gss$marwht, "labels") <- c("Strongly favor" = 1, "Favor" = 2, "Neither favor nor oppose" = 3,
                                 "Oppose" = 4, "Strongly oppose" = 5)
 
-# ============================================================
-# TABLE 15. Immigration Related Questions
-# ============================================================
+## TABLE 15. Immigration Related Questions----
 
 attr(gss$immcrime, "label") <- "Perception that immigrants increase crime rates"
 attr(gss$immcrime, "labels") <- c("Agree strongly" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
@@ -802,9 +670,7 @@ attr(gss$letin1a, "label") <- "Perception that the number of immigrants should b
 attr(gss$letin1a, "labels") <- c("Increased a lot" = 1, "Increased a little" = 2, "Remain the same as it is" = 3,
                                  "Reduced a little" = 4, "Reduced a lot" = 5)
 
-# ============================================================
-# TABLE 16. Happiness and Satisfaction
-# ============================================================
+## TABLE 16. Happiness and Satisfaction----
 
 attr(gss$happy, "label") <- "Happiness level"
 attr(gss$happy, "labels") <- c("Very happy" = 1, "Pretty happy" = 2, "Not too happy" = 3)
@@ -826,9 +692,7 @@ attr(gss$satfin, "label") <- "Level of financial satisfaction"
 attr(gss$satfin, "labels") <- c("Pretty well satisfied" = 1, "More or less satisfied" = 2,
                                 "Not satisfied at all" = 3)
 
-# ============================================================
-# TABLE 17. Technology and Media Use
-# ============================================================
+## TABLE 17. Technology and Media Use----
 
 attr(gss$news, "label") <- "Level of reading newspaper"
 attr(gss$news, "labels") <- c("Everyday" = 1, "A few times a week" = 2, "Once a week" = 3,
@@ -839,9 +703,7 @@ attr(gss$tvhours, "label") <- "Television screen time in hours"
 attr(gss$compuse, "label") <- "Use of computer"
 attr(gss$compuse, "labels") <- c("Yes" = 1, "No" = 2)
 
-# ============================================================
-# TABLE 18. Confidence in Institutions
-# ============================================================
+## TABLE 18. Confidence in Institutions----
 
 attr(gss$confinan, "label") <- "Confidence level in banks and financial institutions"
 attr(gss$confinan, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
@@ -882,9 +744,7 @@ attr(gss$conlegis, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly a
 attr(gss$conarmy, "label") <- "Confidence level in military"
 attr(gss$conarmy, "labels") <- c("A great deal" = 1, "Only some" = 2, "Hardly any" = 3)
 
-# ============================================================
-# TABLE 19. Family and Gender Roles
-# ============================================================
+## TABLE 19. Family and Gender Roles----
 
 attr(gss$meovrwrk, "label") <- "Level of agreement with the negative impact of men's work commitment on family life"
 attr(gss$meovrwrk, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
@@ -898,9 +758,7 @@ attr(gss$fefam, "label") <- "Level of agreement with the belief that traditional
 attr(gss$fefam, "labels") <- c("Strongly agree" = 1, "Agree" = 2, "Neither agree nor disagree" = 3,
                                "Disagree" = 4, "Strongly disagree" = 5)
 
-# ============================================================
-# TABLE 20. Police Abuse
-# ============================================================
+## TABLE 20. Police Abuse----
 
 attr(gss$polhitok, "label") <- "Support of police violence for some reason"
 attr(gss$polhitok, "labels") <- c("Yes" = 1, "No" = 2)
@@ -917,9 +775,7 @@ attr(gss$polescap, "labels") <- c("Yes" = 1, "No" = 2)
 attr(gss$polattak, "label") <- "Support of police violence if citizen attacking policeman with fists"
 attr(gss$polattak, "labels") <- c("Yes" = 1, "No" = 2)
 
-# ============================================================
-# TABLE 21. Miscellaneous
-# ============================================================
+## TABLE 21. Miscellaneous
 
 attr(gss$fear, "label") <- "Sense of neighborhood security"
 attr(gss$fear, "labels") <- c("Yes" = 1, "No" = 2)
